@@ -24,20 +24,20 @@ Set up the necessary environment variables or hardcoded values for the API token
 # Usage
 1.Clone the repository to your local machine:
 
-git clone <repository-url>
+  git clone <repository-url>
 
-cd <repository-directory>
+  cd <repository-directory>
 
 2. Build the Go script:
 
-go build -o app_creation main.go
+  go build -o app_creation main.go
 
 3. Run the script with the following command:
-./app_creation -mode <mode>
+  ./app_creation -mode <mode>
 
-Replace <mode> with either sequential or concurrent. The default mode is sequential.
+  Replace <mode> with either sequential or concurrent. The default mode is sequential.
 
-Follow the prompts to enter the number of organizations, projects per organization, applications per project, and users per organization.
+  Follow the prompts to enter the number of organizations, projects per organization, applications per project, and users per organization.
 
 # Functions Overview
 This script contains the following main functions:
@@ -77,11 +77,11 @@ The script supports two execution modes:
 
 Sequential Mode: Creates organizations, projects, applications, and users one after the other. This is useful for debugging and understanding the process flow.
 
-./app_creation -mode sequential
+  ./app_creation -mode sequential
 
 Concurrent Mode: Creates organizations, projects, applications, and users simultaneously, which significantly reduces the execution time. This mode is suitable for large-scale operations.
 
-./app_creation -mode concurrent
+  ./app_creation -mode concurrent
 
 # Logging
 The script logs its operations to an application.log file located in the current directory. It includes detailed information about the success or failure of API requests, as well as timestamps for better traceability.
