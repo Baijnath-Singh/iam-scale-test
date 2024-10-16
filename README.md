@@ -24,8 +24,7 @@ Set up the necessary environment variables or hardcoded values for the API token
 # Usage
 1.Clone the repository to your local machine:
 
-2. Build the Go script:
-
+2.Build the Go script:
   go build -o app_creation main.go
 
 3. Run the script with the following command:
