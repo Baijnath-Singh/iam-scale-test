@@ -3,10 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
+	"os"
+	"sync"
 	"time"
 )
 
@@ -49,7 +53,7 @@ type User struct {
 	} `json:"password"`
 }
 
-var apiToken = "rzImSIbtj2qHpP8jnaU23Et5uQM07oinEUZxXTry6Akj5Dsv00xMGDwVO2GQfkUQfHPRlB8" // Replace with your actual API token
+var apiToken = "yvx5Z6UMNtZhRlSnYYM_p3bdoXTSajKNEbucqdlM3yTfOB_slZ0fBaawF907xg0JzpN7Hhs" // Replace with your actual API token
 var baseURL = "http://127.0.0.1.sslip.io:8080/management/v1"
 var baseURLv2 = "http://127.0.0.1.sslip.io:8080/v2" // Replace with actual Zitadel API URL
 
@@ -387,6 +391,15 @@ func createUser(userId, username, givenName, familyName, email, phone, password,
 
 func main() {
 	var numOrgs, numProjects, numApplications, numUsers int
+	var mode string
+
+	// Initialize logging
+	initLogging("application.log")
+	log.Println("Application started") // Test log entry
+
+	// Accept the mode of operation as a command-line argument
+	flag.StringVar(&mode, "mode", "sequential", "Execution mode: 'sequential' or 'concurrent'")
+	flag.Parse()
 
 	// Take inputs from user
 	fmt.Print("Enter number of organizations: ")
@@ -418,69 +431,279 @@ func main() {
 		log.Fatal("All input values must be positive integers.")
 	}
 
+	// Check the mode and run accordingly
+	switch mode {
+	case "concurrent":
+		runConcurrent(numOrgs, numProjects, numApplications, numUsers)
+	case "sequential":
+		runSequential(numOrgs, numProjects, numApplications, numUsers)
+	default:
+		log.Fatal("Invalid mode. Please choose 'sequential' or 'concurrent'.")
+	}
+}
+
+func runSequential(numOrgs, numProjects, numApplications, numUsers int) {
+	fmt.Println("Running in sequential mode...")
+
 	// Initialize counters for created entities
 	var orgCount, projectCount, appCount, userCount int
 
-	// Create organizations, projects, applications, and users
+	// Create organizations, projects, applications, and users (sequentially)
 	for i := 0; i < numOrgs; i++ {
 		orgName := fmt.Sprintf("org-%d", i+1)
 
-		// Create the organization and handle errors
+		// Create organization
 		orgId, err := createOrganization(orgName)
 		if err != nil {
-			log.Fatalf("Error creating organization %s: %v", orgName, err) // Exit on error
+			log.Fatalf("Error creating organization %s: %v", orgName, err)
 		}
-		orgCount++ // Increment organization count
+		orgCount++
 
-		// For each created organization, create projects
+		// Create projects for each organization
 		for j := 0; j < numProjects; j++ {
 			projName := fmt.Sprintf("project-%d", j+1)
-
-			// Create the project and handle errors
 			projId, err := createProject(orgId, projName)
 			if err != nil {
-				log.Fatalf("Error creating project %s: %v", projName, err) // Exit on error
+				log.Fatalf("Error creating project %s: %v", projName, err)
 			}
-			projectCount++ // Increment project count
+			projectCount++
 
-			// For each created project, create applications
+			// Create applications for each project
 			for k := 0; k < numApplications; k++ {
 				appName := fmt.Sprintf("app-%d", k+1)
-
-				// Create the application and handle errors
 				_, err := createApplication(orgId, projId, appName)
 				if err != nil {
-					log.Fatalf("Error creating application %s: %v", appName, err) // Exit on error
+					log.Fatalf("Error creating application %s: %v", appName, err)
 				}
-				appCount++ // Increment application count
+				appCount++
 			}
 		}
 
-		// For each created organization, create users
+		// Create users for each organization
 		for l := 0; l < numUsers; l++ {
-			// Create a unique user ID for each user
 			userId := fmt.Sprintf("user-%d-org-%d", l+1, i+1)
-			// Ensure the User ID is within the character limits
-			if len(userId) < 1 || len(userId) > 200 {
-				log.Fatalf("User ID '%s' for user-%d exceeds character limits.", userId, l+1)
-			}
 			userName := fmt.Sprintf("user-%d-org-%d", l+1, i+1)
 			givenName := fmt.Sprintf("GivenName%d", l+1)
 			familyName := fmt.Sprintf("FamilyName%d", l+1)
-			email := fmt.Sprintf("user%d-org%d@example.com", l+1, i+1) // Unique email
+			email := fmt.Sprintf("user%d-org%d@example.com", l+1, i+1)
 			phone := fmt.Sprintf("+123456789%d", l)
-			password := "Secret@1234" // Consider improving this
+			password := "Secret@1234"
 
-			if err := createUser(userId, userName, givenName, familyName, email, phone, password, orgId); err != nil {
-				log.Fatalf("Error creating user %s: %v", userName, err) // Exit on error
+			err := createUser(userId, userName, givenName, familyName, email, phone, password, orgId)
+			if err != nil {
+				log.Fatalf("Error creating user %s: %v", userName, err)
 			}
-			userCount++ // Increment user count
+			userCount++
 		}
 	}
 
-	// Log the totals after all entities have been created
+	// Print summary
 	fmt.Printf("\nTotal Organizations Created: %d\n", orgCount)
 	fmt.Printf("Total Projects Created: %d\n", projectCount)
 	fmt.Printf("Total Applications Created: %d\n", appCount)
 	fmt.Printf("Total Users Created: %d\n", userCount)
+}
+
+// Constants for retry logic
+const maxRetries = 3
+const initialBackoff = time.Millisecond * 100
+
+// Worker pool size to limit concurrent goroutines
+const workerPoolSize = 100
+
+// Create exponential backoff with time tracking
+func retryWithBackoff(attempts int, fn func() error, actionName string) error {
+	backoff := initialBackoff
+	for i := 0; i < attempts; i++ {
+		start := time.Now() // Start the timer for the API call
+		err := fn()
+		duration := time.Since(start) // Calculate the duration of the API call
+
+		if err == nil {
+			log.Printf("%s succeeded. Time taken: %v\n", actionName, duration)
+			return nil
+		}
+		log.Printf("%s failed on attempt %d after %v. Retrying...\n", actionName, i+1, duration)
+		if i < attempts-1 {
+			time.Sleep(backoff)
+			backoff *= 2
+		}
+	}
+	return fmt.Errorf("after %d attempts, last error: %v", attempts, fn())
+}
+
+// Worker pool to control concurrency
+func workerPool(workerLimit int, wg *sync.WaitGroup, jobs <-chan func()) {
+	sem := make(chan struct{}, workerLimit)
+	for job := range jobs {
+		sem <- struct{}{} // Acquire worker
+		wg.Add(1)
+		go func(job func()) {
+			defer wg.Done()
+			defer func() { <-sem }() // Release worker
+			job()
+		}(job)
+	}
+}
+
+func generateUniqueName(base string, count int) string {
+	// Random number generation for uniqueness
+	randomSuffix := rand.Intn(10000)                          // Random number between 0 and 9999
+	return fmt.Sprintf("%s-%d-%d", base, count, randomSuffix) // Add random number for uniqueness
+}
+
+func runConcurrent(numOrgs, numProjects, numApplications, numUsers int) {
+	fmt.Println("Running in concurrent mode...")
+
+	startTotal := time.Now() // Start tracking total execution time
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	// Initialize counters for created entities
+	var orgCount, projectCount, appCount, userCount int
+
+	// Create channels for jobs
+	orgJobs := make(chan func(), numOrgs)
+	projectJobs := make(chan func(), numProjects*numOrgs)
+	appJobs := make(chan func(), numApplications*numProjects*numOrgs)
+	userJobs := make(chan func(), numUsers*numOrgs)
+
+	// Create a worker pool to handle org, project, app, and user creation concurrently
+	go workerPool(workerPoolSize, &wg, orgJobs)
+	go workerPool(workerPoolSize, &wg, projectJobs)
+	go workerPool(workerPoolSize, &wg, appJobs)
+	go workerPool(workerPoolSize, &wg, userJobs)
+
+	// Create organizations concurrently
+	for i := 0; i < numOrgs; i++ {
+		orgName := generateUniqueName("org", i+1) // Unique org name
+		wg.Add(1)                                 // Add to WaitGroup before submitting the job
+		orgJobs <- func() {
+			defer wg.Done() // Mark job as done when finished
+			err := retryWithBackoff(maxRetries, func() error {
+				orgId, err := createOrganization(orgName)
+				if err != nil {
+					return err
+				}
+
+				// Create projects, apps, and users for each organization
+				for j := 0; j < numProjects; j++ {
+					projName := generateUniqueName(orgName+"-project", j+1) // Unique project name
+					wg.Add(1)                                               // Add to WaitGroup before submitting the project job
+					projectJobs <- func() {
+						defer wg.Done() // Mark job as done when finished
+						err := retryWithBackoff(maxRetries, func() error {
+							projId, err := createProject(orgId, projName)
+							if err != nil {
+								return err
+							}
+
+							mu.Lock()
+							projectCount++
+							mu.Unlock()
+
+							// Create applications for the project
+							for k := 0; k < numApplications; k++ {
+								appName := generateUniqueName(projName+"-app", k+1) // Unique application name
+								wg.Add(1)                                           // Add to WaitGroup before submitting the application job
+								appJobs <- func() {
+									defer wg.Done() // Mark job as done when finished
+									err := retryWithBackoff(maxRetries, func() error {
+										_, err := createApplication(orgId, projId, appName)
+										if err != nil {
+											return err
+										}
+
+										mu.Lock()
+										appCount++
+										mu.Unlock()
+										return nil
+									}, fmt.Sprintf("Create Application: %s", appName))
+									if err != nil {
+										log.Printf("Error creating application %s: %v", appName, err)
+									}
+								}
+							}
+							return nil
+						}, fmt.Sprintf("Create Project: %s", projName))
+						if err != nil {
+							log.Printf("Error creating project %s: %v", projName, err)
+						}
+					}
+				}
+
+				// Create users for the organization
+				for l := 0; l < numUsers; l++ {
+					userName := generateUniqueName(orgName+"-user", l+1) // Unique user name
+					wg.Add(1)                                            // Add to WaitGroup before submitting the user job
+					userJobs <- func() {
+						defer wg.Done() // Mark job as done when finished
+						err := retryWithBackoff(maxRetries, func() error {
+							userId := fmt.Sprintf("user-%d-org-%s", l+1, orgId)
+							givenName := fmt.Sprintf("GivenName%d", l+1)
+							familyName := fmt.Sprintf("FamilyName%d", l+1)
+							email := fmt.Sprintf("user%d-org%s@example.com", l+1, orgId)
+							phone := fmt.Sprintf("+123456789%d", l)
+							password := "Secret@1234"
+
+							err := createUser(userId, userName, givenName, familyName, email, phone, password, orgId)
+							if err != nil {
+								return err
+							}
+
+							mu.Lock()
+							userCount++
+							mu.Unlock()
+							return nil
+						}, fmt.Sprintf("Create User: %s", userName))
+						if err != nil {
+							log.Printf("Error creating user %s: %v", userName, err)
+						}
+					}
+				}
+
+				mu.Lock()
+				orgCount++
+				mu.Unlock()
+				return nil
+			}, fmt.Sprintf("Create Organization: %s", orgName))
+			if err != nil {
+				log.Printf("Error creating organization %s: %v", orgName, err)
+			}
+		}
+	}
+
+	// Close job channels only after all jobs have been submitted and processed
+	go func() {
+		wg.Wait() // Wait for all jobs to be added and processed
+		close(orgJobs)
+		close(projectJobs)
+		close(appJobs)
+		close(userJobs)
+	}()
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+
+	// Track total execution time
+	totalDuration := time.Since(startTotal)
+
+	// Print summary
+	fmt.Printf("\nTotal Organizations Created: %d\n", orgCount)
+	fmt.Printf("Total Projects Created: %d\n", projectCount)
+	fmt.Printf("Total Applications Created: %d\n", appCount)
+	fmt.Printf("Total Users Created: %d\n", userCount)
+	fmt.Printf("Total Time Taken: %v\n", totalDuration)
+}
+
+func initLogging(logFilePath string) {
+	file, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening log file: %v", err)
+	}
+	log.SetOutput(file)
+
+	// Add this line to confirm logging is initialized
+	log.Println("Logging initialized successfully")
 }
