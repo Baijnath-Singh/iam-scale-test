@@ -27,7 +27,7 @@ Set up the necessary environment variables or hardcoded values for the API token
 2.Build the Go script:
   go build -o app_creation main.go
 
-3. Run the script with the following command:
+3.Run the script with the following command:
   ./app_creation -mode <mode>
 
   Replace <mode> with either sequential or concurrent. The default mode is sequential.
