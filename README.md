@@ -16,26 +16,37 @@ Error Handling and Retries
 Before running the script, ensure you have the following:
 
 Go programming language installed (version 1.16 or higher).
+
 Access to a Zitadel API with valid credentials.
+
 Set up the necessary environment variables or hardcoded values for the API token (apiToken) and base URLs (baseURL, baseURLv2).
 
 # Usage
 Clone the repository to your local machine:
 
 bash
+
 Copy code
+
 git clone <repository-url>
+
 cd <repository-directory>
+
 Build the Go script:
 
 bash
+
 Copy code
 go build -o app_creation main.go
+
 Run the script with the following command:
 
 bash
+
 Copy code
+
 ./app_creation -mode <mode>
+
 Replace <mode> with either sequential or concurrent. The default mode is sequential.
 
 Follow the prompts to enter the number of organizations, projects per organization, applications per project, and users per organization.
@@ -79,15 +90,20 @@ The script supports two execution modes:
 Sequential Mode: Creates organizations, projects, applications, and users one after the other. This is useful for debugging and understanding the process flow.
 
 bash
+
 Copy code
+
 ./app_creation -mode sequential
 
 Concurrent Mode: Creates organizations, projects, applications, and users simultaneously, which significantly reduces the execution time. This mode is suitable for large-scale operations.
 
 bash
+
 Copy code
+
 ./app_creation -mode concurrent
-Logging
+
+# Logging
 The script logs its operations to an application.log file located in the current directory. It includes detailed information about the success or failure of API requests, as well as timestamps for better traceability.
 
 # Error Handling and Retries
