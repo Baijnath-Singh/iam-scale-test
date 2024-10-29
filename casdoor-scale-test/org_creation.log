@@ -1,0 +1,7 @@
+2024/10/28 20:55:32 main.go:65: Successfully created organization TestOrg_0_478 in 19.107567ms
+2024/10/28 20:55:32 main.go:65: Successfully created organization TestOrg_1_9080 in 16.082118ms
+2024/10/28 20:55:32 main.go:65: Successfully created organization TestOrg_2_5730 in 13.898027ms
+2024/10/28 20:55:32 main.go:65: Successfully created organization TestOrg_3_9545 in 12.353405ms
+2024/10/28 20:55:32 main.go:65: Successfully created organization TestOrg_4_9145 in 14.851725ms
+2024/10/28 20:55:32 main.go:128: Total organizations created: 5
+2024/10/28 20:55:32 main.go:129: Average time taken per organization: 15.258568ms
