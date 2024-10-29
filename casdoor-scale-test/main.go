@@ -96,6 +96,9 @@ func main() {
 	fmt.Print("Enter number of goroutines (parallelism): ")
 	fmt.Scan(&numGoroutines)
 
+	// Start total time measurement
+	totalStartTime := time.Now()
+
 	// Channels and wait group for concurrency and timing
 	timings := make(chan TimingInfo, numOrgs)
 	var wg sync.WaitGroup
@@ -121,10 +124,16 @@ func main() {
 
 	// Calculate average time
 	avgDuration := totalDuration / time.Duration(createdOrgs)
+
+	// Calculate total elapsed time
+	totalElapsedTime := time.Since(totalStartTime)
+
+	// Print and log results
 	fmt.Printf("Total organizations created: %d\n", createdOrgs)
 	fmt.Printf("Average time taken per organization: %v\n", avgDuration)
+	fmt.Printf("Total time taken to create all organizations: %v\n", totalElapsedTime)
 
-	// Log final results
 	log.Printf("Total organizations created: %d\n", createdOrgs)
 	log.Printf("Average time taken per organization: %v\n", avgDuration)
+	log.Printf("Total time taken to create all organizations: %v\n", totalElapsedTime)
 }

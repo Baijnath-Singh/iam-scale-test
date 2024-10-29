@@ -53,9 +53,9 @@ type User struct {
 	} `json:"password"`
 }
 
-var apiToken = "yvx5Z6UMNtZhRlSnYYM_p3bdoXTSajKNEbucqdlM3yTfOB_slZ0fBaawF907xg0JzpN7Hhs" // Replace with your actual API token
-var baseURL = "http://127.0.0.1.sslip.io:8080/management/v1"
-var baseURLv2 = "http://127.0.0.1.sslip.io:8080/v2" // Replace with actual Zitadel API URL
+var apiToken = "hIpIAjr-Hy6ickpfhq5CB-awmwQARH9p68nvoJuW0sDfpKBRZ0_pulFKSru90jjS--Y6ezM" // Replace with your actual API token
+var baseURL = "http://localhost:8080/management/v1"
+var baseURLv2 = "http://localhost:8080/v2" // Replace with actual Zitadel API URL
 
 // Create a single HTTP client to be reused
 var client = &http.Client{}
@@ -427,8 +427,8 @@ func main() {
 	}
 
 	// Validate inputs
-	if numOrgs <= 0 || numProjects <= 0 || numApplications <= 0 || numUsers <= 0 {
-		log.Fatal("All input values must be positive integers.")
+	if numOrgs < 0 || numProjects < 0 || numApplications < 0 || numUsers < 0 {
+		log.Fatal("All input values must be equal or greate than 0")
 	}
 
 	// Check the mode and run accordingly

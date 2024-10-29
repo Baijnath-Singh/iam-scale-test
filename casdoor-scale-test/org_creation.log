@@ -5,3 +5,16 @@
 2024/10/28 20:55:32 main.go:65: Successfully created organization TestOrg_4_9145 in 14.851725ms
 2024/10/28 20:55:32 main.go:128: Total organizations created: 5
 2024/10/28 20:55:32 main.go:129: Average time taken per organization: 15.258568ms
+2024/10/29 13:43:30 main.go:65: Successfully created organization TestOrg_1_4538 in 112.590003ms
+2024/10/29 13:43:30 main.go:65: Successfully created organization TestOrg_0_6509 in 112.443527ms
+2024/10/29 13:43:30 main.go:65: Successfully created organization TestOrg_2_6168 in 13.497559ms
+2024/10/29 13:43:30 main.go:65: Successfully created organization TestOrg_3_700 in 15.980579ms
+2024/10/29 13:43:31 main.go:65: Successfully created organization TestOrg_5_9419 in 12.594239ms
+2024/10/29 13:43:31 main.go:65: Successfully created organization TestOrg_4_9196 in 14.631881ms
+2024/10/29 13:43:31 main.go:65: Successfully created organization TestOrg_7_9867 in 13.34314ms
+2024/10/29 13:43:31 main.go:65: Successfully created organization TestOrg_6_6942 in 15.595543ms
+2024/10/29 13:43:31 main.go:65: Successfully created organization TestOrg_8_5617 in 11.932249ms
+2024/10/29 13:43:31 main.go:65: Successfully created organization TestOrg_9_3272 in 13.653238ms
+2024/10/29 13:43:31 main.go:136: Total organizations created: 10
+2024/10/29 13:43:31 main.go:137: Average time taken per organization: 33.626195ms
+2024/10/29 13:43:31 main.go:138: Total time taken to create all organizations: 191.801342ms
